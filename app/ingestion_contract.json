@@ -1,0 +1,19 @@
+{
+  "ingestion_engine": "OpenCV",
+  "accepted_formats": [
+    "jpg",
+    "jpeg",
+    "png",
+    "webp"
+  ],
+  "maximum_file_size_mb": 10,
+  "minimum_width": 32,
+  "minimum_height": 32,
+  "color_conversion": "BGR_to_RGB",
+  "model_input_size": [
+    224,
+    224
+  ],
+  "persistent_image_storage": false,
+  "raw_dataset_required": false
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "role": "visual_evidence_extractor",
+  "instruction": "Analyze the supplied infrastructure image and return only observable visual evidence relevant to infrastructure condition assessment. Do not invent hidden structural conditions. Do not provide a definitive engineering diagnosis. If evidence is insufficient, explicitly report insufficient evidence.",
+  "output_schema": {
+    "image_assessment": {
+      "image_quality": "good | acceptable | poor",
+      "visibility": "clear | partial | obstructed"
+    },
+    "observations": [
+      {
+        "observation": "string",
+        "evidence_type": "crack | spallation | efflorescence | exposed_bars | corrosion_stain | surface_condition | other",
+        "location_description": "string",
+        "visual_confidence": "low | medium | high"
+      }
+    ],
+    "negative_evidence": [
+      {
+        "observation": "string",
+        "confidence": "low | medium | high"
+      }
+    ],
+    "limitations": [
+      "string"
+    ],
+    "engineering_decision": {
+      "status": "not_provided",
+      "reason": "Engineering significance and final disposition require qualified human validation."
+    }
+  },
+  "forbidden_behavior": [
+    "Do not invent measurements.",
+    "Do not infer hidden damage not visible in the image.",
+    "Do not claim structural safety.",
+    "Do not assign final engineering severity.",
+    "Do not fabricate defect locations.",
+    "Do not convert visual confidence into calibrated probability.",
+    "Do not average confidence values from different models."
+  ],
+  "evidence_principle": "Gemini output is one independent evidence source. It must remain distinguishable from domain-CV evidence and must be reconciled through evidence arbitration."
+}
