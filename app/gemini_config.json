@@ -30,5 +30,20 @@
       503,
       504
     ]
+  },
+  "key_rotation": {
+    "enabled": true,
+    "env_names": [
+      "GEMINI_API_KEY",
+      "GEMINI_API_KEY1",
+      "GEMINI_API_KEY2",
+      "GEMINI_API_KEY3",
+      "GEMINI_API_KEY4",
+      "GEMINI_API_KEY5"
+    ],
+    "rate_limit_cooldown_seconds": 60,
+    "daily_quota_cooldown_seconds": 3600,
+    "auth_cooldown_seconds": 21600,
+    "max_total_seconds": 90
   }
 }
