@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+      - name: Install (CPU torch first, then app requirements)
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r app/requirements.txt pytest ruff
+      - name: Lint (syntax and undefined names only)
+        run: ruff check --select E9,F63,F7,F82 .
+      - name: Secret pattern check
+        run: |
+          if grep -RIEn --exclude-dir=.git --exclude=ci.yml 'AIza[0-9A-Za-z_-]{35}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30,}|sk-ant-[A-Za-z0-9_-]{20,}' . ; then
+            echo "Possible secret committed"; exit 1; fi
+      - name: Tests (includes real checkpoints on CPU and app start-up)
+        run: python -m pytest -q

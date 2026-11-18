@@ -12,6 +12,8 @@ from typing import Any
 from google import genai
 from google.genai import types
 
+from .errors import GeminiAuthError, GeminiQuotaError
+
 
 DEFAULT_CONFIG_PATH = (
     Path(__file__).resolve().parents[1]
@@ -233,6 +235,28 @@ def _is_auth_error(exc: Exception) -> bool:
     )
 
 
+def _is_daily_quota(exc: Exception) -> bool:
+    """True when a 429 message names a per-day quota (it will not clear in a minute)."""
+
+    text = "".join(
+        ch for ch in str(exc).lower() if ch.isalnum()
+    )
+
+    return "perday" in text or "daily" in text
+
+
+def get_model_chain(config_path: Path | None = None) -> list[str]:
+    """Primary model followed by the configured fallbacks, without duplicates."""
+
+    config = _load_json(config_path or DEFAULT_CONFIG_PATH)
+
+    return list(
+        dict.fromkeys(
+            [config["model"], *config.get("fallback_models", [])]
+        )
+    )
+
+
 def _is_transient_error(
     exc: Exception,
     retry_codes: set[int],
@@ -321,7 +345,20 @@ def analyze_image_with_gemini(
     image_bytes: bytes,
     config_path: Path | None = None,
     contract_path: Path | None = None,
+    api_key: str | None = None,
+    models_override: list[str] | None = None,
+    fail_fast_on_quota: bool = False,
 ) -> dict[str, Any]:
+    """Run Gemini visual evidence extraction.
+
+    Defaults keep the original single-key behaviour. The three optional
+    arguments are used by ``key_rotation``:
+
+    * ``api_key``: use this key instead of the configured secret.
+    * ``models_override``: try only these models (instead of the full chain).
+    * ``fail_fast_on_quota``: raise ``GeminiQuotaError`` on HTTP 429 at once,
+      so the caller can switch to another key instead of waiting.
+    """
 
     if not image_bytes:
         raise ValueError("image_bytes cannot be empty.")
@@ -337,7 +374,7 @@ def analyze_image_with_gemini(
         "GEMINI_API_KEY",
     )
 
-    api_key = _get_api_key(key_name)
+    api_key = api_key or _get_api_key(key_name)
 
     primary_model = config["model"]
 
@@ -347,7 +384,11 @@ def analyze_image_with_gemini(
     )
 
     model_chain = list(
-        dict.fromkeys([primary_model, *fallback_models])
+        dict.fromkeys(
+            models_override
+            if models_override
+            else [primary_model, *fallback_models]
+        )
     )
 
     policy = config.get("retry_policy", {})
@@ -476,9 +517,20 @@ def analyze_image_with_gemini(
                     # Invalid credentials cannot be repaired by
                     # changing the model.
                     if _is_auth_error(exc):
-                        raise RuntimeError(
+                        raise GeminiAuthError(
                             "Gemini authentication or permission failed. "
                             "Check the API key and Gemini API access."
+                        ) from exc
+
+                    # Quota / rate limit: let the caller switch key.
+                    if (
+                        fail_fast_on_quota
+                        and _status_code(exc) == 429
+                    ):
+                        raise GeminiQuotaError(
+                            f"Gemini quota or rate limit (HTTP 429) "
+                            f"for model {model_name}.",
+                            daily=_is_daily_quota(exc),
                         ) from exc
 
                     # Model unavailable: move to the next model.

@@ -112,7 +112,7 @@ def load_checkpoint(model, checkpoint_path):
 
 
 def load_codebrim_model():
-    model = build_model("codebrim")
+    model = build_model("codebrim", pretrained=False)
 
     checkpoint = MODEL_DIR / "best_codebrim.pt"
 
@@ -123,7 +123,7 @@ def load_codebrim_model():
 
 
 def load_sdnet_model():
-    model = build_model("sdnet")
+    model = build_model("sdnet", pretrained=False)
 
     checkpoint = MODEL_DIR / "best_sdnet.pt"
 
